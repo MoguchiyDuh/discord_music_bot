@@ -3,23 +3,23 @@ from discord.ext import commands
 from discord import app_commands
 
 
-class TempChannels(commands.Cog):
+class TempChannelsGroup(app_commands.Group):
     """Cog for managing temporary voice channels."""
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, bot: commands.Bot):
+        super().__init__(name="temp-channels", description="Manage temporary channels.")
         self.temp_channels = (
             {}
         )  # {channel_id: {"owner": user_id, "guild_id": guild_id}}
 
-    async def _get_category(self, guild: discord.Guild) -> discord.CategoryChannel:
+    async def __get_category(self, guild: discord.Guild) -> discord.CategoryChannel:
         """Get or create the 'TEMP CHANNELS' category."""
         category = discord.utils.get(guild.categories, name="TEMP CHANNELS")
         if category is None:
             category = await guild.create_category("TEMP CHANNELS")
         return category
 
-    async def _create_temp_channel(
+    async def __create_temp_channel(
         self, member: discord.Member, category: discord.CategoryChannel
     ) -> discord.VoiceChannel:
         """Create a temporary voice channel for the member."""
@@ -34,14 +34,14 @@ class TempChannels(commands.Cog):
         }
         return temp_channel
 
-    async def _delete_temp_channel(self, channel: discord.VoiceChannel):
+    async def __delete_temp_channel(self, channel: discord.VoiceChannel):
         """Delete a temporary channel if it's empty."""
         if len(channel.members) == 0:
             await channel.delete()
             del self.temp_channels[channel.id]
             print(f"Deleted empty temp channel {channel.name}")
 
-    async def _get_user_temp_channel(
+    async def __get_user_temp_channel(
         self, interaction: discord.Interaction
     ) -> discord.VoiceChannel | None:
         """Get the user's temporary channel."""
@@ -57,7 +57,7 @@ class TempChannels(commands.Cog):
     async def on_ready(self):
         """Ensure the 'TEMP CHANNELS' category and lobby channel exist."""
         for guild in self.bot.guilds:
-            category = await self._get_category(guild)
+            category = await self.__get_category(guild)
             if not discord.utils.get(category.voice_channels, name="Join to create"):
                 await category.create_voice_channel("Join to create")
 
@@ -69,11 +69,11 @@ class TempChannels(commands.Cog):
 
         # 'Join to Create' logic
         if after.channel and after.channel.name.lower() == "join to create":
-            category = await self._get_category(member.guild)
-            await self._create_temp_channel(member, category)
+            category = await self.__get_category(member.guild)
+            await self.__create_temp_channel(member, category)
 
         if before.channel and before.channel.id in self.temp_channels:
-            await self._delete_temp_channel(before.channel)
+            await self.__delete_temp_channel(before.channel)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
@@ -81,7 +81,7 @@ class TempChannels(commands.Cog):
         if channel.id in self.temp_channels:
             del self.temp_channels[channel.id]
 
-    async def _update_channel_permissions(
+    async def __update_channel_permissions(
         self,
         temp_channel: discord.VoiceChannel,
         interaction: discord.Interaction,
@@ -97,9 +97,9 @@ class TempChannels(commands.Cog):
     @app_commands.command(name="lock", description="Lock your temporary channel.")
     async def lock(self, interaction: discord.Interaction):
         """Lock the user's temporary channel."""
-        temp_channel = await self._get_user_temp_channel(interaction)
+        temp_channel = await self.__get_user_temp_channel(interaction)
         if temp_channel:
-            message = await self._update_channel_permissions(
+            message = await self.__update_channel_permissions(
                 temp_channel, interaction, False
             )
             await interaction.response.send_message(message)
@@ -111,9 +111,9 @@ class TempChannels(commands.Cog):
     @app_commands.command(name="unlock", description="Unlock your temporary channel.")
     async def unlock(self, interaction: discord.Interaction):
         """Unlock the user's temporary channel."""
-        temp_channel = await self._get_user_temp_channel(interaction)
+        temp_channel = await self.__get_user_temp_channel(interaction)
         if temp_channel:
-            message = await self._update_channel_permissions(
+            message = await self.__update_channel_permissions(
                 temp_channel, interaction, True
             )
             await interaction.response.send_message(message)
@@ -125,7 +125,7 @@ class TempChannels(commands.Cog):
     @app_commands.command(name="rename", description="Rename your temporary channel.")
     async def rename(self, interaction: discord.Interaction, name: str):
         """Rename the user's temporary channel."""
-        temp_channel = await self._get_user_temp_channel(interaction)
+        temp_channel = await self.__get_user_temp_channel(interaction)
         if temp_channel:
             await temp_channel.edit(name=name)
             await interaction.response.send_message(
@@ -141,7 +141,7 @@ class TempChannels(commands.Cog):
     )
     async def limit(self, interaction: discord.Interaction, limit: int):
         """Set the user limit for the user's temporary channel."""
-        temp_channel = await self._get_user_temp_channel(interaction)
+        temp_channel = await self.__get_user_temp_channel(interaction)
         if temp_channel:
             await temp_channel.edit(user_limit=limit)
             await interaction.response.send_message(f"User limit set to: {limit}.")
@@ -155,7 +155,7 @@ class TempChannels(commands.Cog):
     )
     async def kick(self, interaction: discord.Interaction, member: discord.Member):
         """Kick a member from the user's temporary channel."""
-        temp_channel = await self._get_user_temp_channel(interaction)
+        temp_channel = await self.__get_user_temp_channel(interaction)
         if temp_channel and member.voice and member.voice.channel == temp_channel:
             await member.move_to(None)  # Disconnect the user
             await interaction.response.send_message(
@@ -168,6 +168,12 @@ class TempChannels(commands.Cog):
             )
 
 
-async def setup(bot):
+class TempChannels(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.bot.tree.add_command(TempChannelsGroup(bot))
+
+
+async def setup(bot: commands.Bot):
     """Setup function to load the cog."""
     await bot.add_cog(TempChannels(bot))

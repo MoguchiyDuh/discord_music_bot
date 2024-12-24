@@ -72,7 +72,7 @@ class YTSource:
                 tracks=[self.__get_track(entry) for entry in entries["entries"]],
             )
 
-    async def fetch_by_name(self, name) -> list[Track]:
+    async def fetch_track_by_name(self, name) -> list[Track]:
         """Fetches a single song by name"""
         loop = asyncio.get_event_loop()
         with yt_dlp.YoutubeDL(self.YTDL_OPTIONS) as ytdl:

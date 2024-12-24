@@ -159,7 +159,7 @@ class MusicCog(commands.Cog):
         name: str,
     ):
         """Handle track search by name."""
-        tracks_found = await source.fetch_by_name(name)
+        tracks_found = await source.fetch_track_by_name(name)
         view = TrackSelectView(tracks=tracks_found)
         embed = discord.Embed(
             title="🎵Choose the track",
@@ -216,6 +216,9 @@ class MusicCog(commands.Cog):
     # =======================SKIP=======================
     @app_commands.command(
         name="skip", description="Skip the current (0) or specific tracks."
+    )
+    @app_commands.describe(
+        range_or_id="0 - to skip the current track, index - to skip from the queue"
     )
     async def skip(self, interaction: discord.Interaction, range_or_id: str = "0"):
         """Skip tracks in the queue."""
@@ -326,13 +329,14 @@ class MusicCog(commands.Cog):
                 f"❌ Unable to fetch lyrics. Status: {response.status}"
             )
         else:
-            embed = discord.Embed(
-                title=f"**{response.title}**",
-                description=response.text + f"\n\n🔗 Full lyrics: {response.url}",
-                color=discord.Color.blue(),
-            )
+            for i, chunk in enumerate(response.text):
+                embed = discord.Embed(
+                    title=f"**{response.title}**" if i == 0 else None,
+                    description=chunk,
+                    color=discord.Color.blue(),
+                )
 
-            await interaction.followup.send(embed=embed)
+                await interaction.followup.send(embed=embed)
 
 
 async def setup(bot):

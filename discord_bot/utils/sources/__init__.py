@@ -33,8 +33,12 @@ class Playlist:
     def duration(self) -> int:
         return sum([song.duration for song in self.tracks])
 
+    @property
+    def length(self) -> int:
+        return sum(len(self.tracks))
+
     def __repr__(self):
         return self.title
 
     def __str__(self):
-        return f"Playlist Title: [{self.title}](<{self.webpage_url}>)\nDuration: {self.duration}s\nSongs Count: {len(self.tracks)}"
+        return f"Playlist Title: [{self.title}](<{self.webpage_url}>)\nDuration: {self.duration}s\nSongs Count: {self.length}"
